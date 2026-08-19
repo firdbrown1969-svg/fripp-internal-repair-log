@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf Cart Repair Log — Fripp Island Excursions</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; font-family: 'Outfit', sans-serif; background: #f5f5f5; }
+body { padding: 20px; }
+.container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+.header { background: linear-gradient(135deg, #060f1e 0%, #0B1E3D 100%); padding: 24px; color: white; border-bottom: 3px solid #D4AF37; }
+.header h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.header p { font-size: 13px; color: rgba(255,255,255,0.7); }
+.header-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.meta-item { font-size: 12px; color: rgba(255,255,255,0.6); }
+.meta-item strong { color: #D4AF37; display: block; font-size: 14px; margin-bottom: 2px; }
+.status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.status-online { background: #22c55e; color: white; }
+.status-syncing { background: #f59e0b; color: white; }
+
+.controls { padding: 16px 24px; display: flex; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #eee; align-items: center; }
+.controls input, .controls button { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: inherit; }
+.controls input { flex: 1; min-width: 200px; }
+.controls button { background: #0B1E3D; color: white; border: none; font-weight: 600; cursor: pointer; }
+.controls button:hover { background: #0d2847; }
+
+.content { padding: 24px; overflow-y: auto; height: calc(100vh - 300px); }
+.repair-card { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.repair-card:hover { background: #fafbff; border-color: #0B1E3D; }
+.repair-header { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; margin-bottom: 12px; align-items: center; }
+.cart-num { background: #D4AF37; color: #000; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 14px; text-align: center; }
+.repair-date { color: #666; font-size: 12px; font-weight: 500; }
+.repair-tech { color: #0B1E3D; font-size: 12px; font-weight: 600; }
+
+.repair-description { background: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #0B1E3D; }
+.repair-description strong { display: block; font-size: 12px; color: #0B1E3D; margin-bottom: 4px; }
+.repair-description p { font-size: 12px; color: #333; line-height: 1.5; }
+
+.parts-section { }
+.parts-section strong { display: block; font-size: 12px; color: #0B1E3D; margin-bottom: 6px; }
+.parts-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.part-tag { background: #e8f1ff; color: #0B1E3D; padding: 4px 10px; border-radius: 4px; font-size: 11px; border: 1px solid #c5d9f1; }
+
+.empty { text-align: center; padding: 40px 20px; color: #999; }
+.empty p { font-size: 14px; margin-bottom: 8px; }
+
+.footer { padding: 16px 24px; background: #f9f9f9; border-top: 1px solid #eee; font-size: 11px; color: #999; display: flex; justify-content: space-between; }
+
+@media print {
+  body { padding: 0; }
+  .container { box-shadow: none; border-radius: 0; }
+  .controls { display: none; }
+  .content { height: auto; overflow: visible; }
+}
+
+.add-repair-form { background: #f0f5ff; padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 2px dashed #0B1E3D; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-row label { display: block; font-size: 11px; font-weight: 600; color: #0B1E3D; margin-bottom: 4px; }
+.form-row input, .form-row textarea, .form-row button { padding: 8px; border: 1px solid #0B1E3D; border-radius: 4px; font-family: inherit; font-size: 12px; }
+.form-row textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+.form-row button { background: #0B1E3D; color: white; border: none; font-weight: 600; cursor: pointer; }
+.form-row button:hover { background: #0d2847; }
+
+.loading { text-align: center; padding: 20px; color: #999; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #0B1E3D; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🛠️ Golf Cart Repair Log</h1>
+    <p>Fripp Island Excursions — Shared Maintenance Record</p>
+    <div class="header-meta">
+      <div class="meta-item"><strong id="today-date"></strong></div>
+      <div class="meta-item"><strong id="total-repairs">0</strong> Total Repairs</div>
+      <div class="meta-item"><strong id="carts-serviced">0</strong> Carts Serviced</div>
+      <div class="meta-item"><span class="status-badge status-online" id="status">🟢 Connected</span></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search by cart number, description, or parts..." onkeyup="filterRepairs()">
+    <button onclick="window.print()">🖨️ Print</button>
+    <button onclick="toggleRepairForm()">➕ Add Repair</button>
+  </div>
+
+  <div class="content">
+    <div id="add-form-container"></div>
+    <div id="repairs-container"><div class="loading"><div class="spinner"></div><p style="margin-top:10px;">Loading repairs...</p></div></div>
+  </div>
+
+  <div class="footer">
+    <span>Last updated: <strong id="last-updated">Just now</strong></span>
+    <span>Synced across all devices • Fripp Island Excursions © 2026</span>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// Firebase Init
+firebase.initializeApp({
+  apiKey: "AIzaSyAdtX5u800u0Ga10wlfQDvM0L8ISu6SDn0",
+  authDomain: "fripp-tracker-67699.firebaseapp.com",
+  projectId: "fripp-tracker-67699",
+  storageBucket: "fripp-tracker-67699.firebasestorage.app",
+  messagingSenderId: "946287408816",
+  appId: "1:946287408816:web:732cd0b97cd95a972f2d75"
+});
+
+const db = firebase.firestore();
+const repairsCol = db.collection("golf_cart_repairs");
+
+let repairs = [];
+let formVisible = false;
+
+// Load repairs on page load
+window.addEventListener('load', () => {
+  console.log("App loaded - connecting to Firestore");
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  
+  // Listen for real-time updates
+  repairsCol.orderBy('date', 'desc').onSnapshot(
+    (snapshot) => {
+      console.log("Real-time update: ", snapshot.size, "repairs");
+      repairs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      renderRepairs();
+      updateStats();
+      updateStatus('online');
+    },
+    (error) => {
+      console.error("Real-time listener error:", error);
+      updateStatus('error');
+      alert("Connection error: " + error.message);
+    }
+  );
+});
+
+function updateStatus(status) {
+  const badge = document.getElementById('status');
+  if (status === 'online') {
+    badge.textContent = '🟢 Connected';
+    badge.className = 'status-badge status-online';
+  } else if (status === 'syncing') {
+    badge.textContent = '🟡 Syncing...';
+    badge.className = 'status-badge status-syncing';
+  } else {
+    badge.textContent = '🔴 Offline';
+    badge.className = 'status-badge';
+  }
+}
+
+function updateLastUpdated() {
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  document.getElementById('last-updated').textContent = time;
+}
+
+function updateStats() {
+  document.getElementById('total-repairs').textContent = repairs.length;
+  const uniqueCarts = new Set(repairs.map(r => r.cartNum)).size;
+  document.getElementById('carts-serviced').textContent = uniqueCarts;
+}
+
+function renderRepairs() {
+  const container = document.getElementById('repairs-container');
+  
+  if (!repairs.length) {
+    container.innerHTML = '<div class="empty"><p>📭 No repairs logged yet.</p><p>Click "➕ Add Repair" to create your first entry.</p></div>';
+    return;
+  }
+  
+  container.innerHTML = repairs.map(r => `
+    <div class="repair-card">
+      <div class="repair-header">
+        <div class="cart-num">Cart #${r.cartNum}</div>
+        <div class="repair-date">📅 ${new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+        <div class="repair-tech">👤 ${r.tech || 'Unassigned'}</div>
+        <button onclick="deleteRepair('${r.id}')" style="background:#f5f5f5;border:1px solid #ddd;padding:6px 8px;border-radius:4px;cursor:pointer;font-size:12px;">Delete</button>
+      </div>
+      <div class="repair-description">
+        <strong>What Was Done:</strong>
+        <p>${r.description}</p>
+      </div>
+      <div class="parts-section">
+        <strong>Parts Used:</strong>
+        <div class="parts-list">
+          ${(r.parts || []).map(p => `<span class="part-tag">${p}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+  
+  updateLastUpdated();
+}
+
+function filterRepairs() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const cards = document.querySelectorAll('.repair-card');
+  
+  cards.forEach(card => {
+    const text = card.textContent.toLowerCase();
+    card.style.display = text.includes(search) ? 'block' : 'none';
+  });
+}
+
+function toggleRepairForm() {
+  const container = document.getElementById('add-form-container');
+  formVisible = !formVisible;
+  
+  if (!formVisible) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  container.innerHTML = `
+    <div class="add-repair-form">
+      <h3 style="font-size:14px;margin-bottom:12px;color:#0B1E3D;">Add New Repair</h3>
+      <div class="form-row">
+        <div>
+          <label>Cart Number *</label>
+          <input type="text" id="new-cart" placeholder="e.g., 001" maxlength="3">
+        </div>
+        <div>
+          <label>Date *</label>
+          <input type="date" id="new-date" value="${new Date().toISOString().split('T')[0]}">
+        </div>
+        <div>
+          <label>Technician</label>
+          <input type="text" id="new-tech" placeholder="e.g., Cody">
+        </div>
+      </div>
+      <div class="form-row full">
+        <div>
+          <label>Description of Work Done *</label>
+          <textarea id="new-description" placeholder="What repairs were performed..."></textarea>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div>
+          <label>Parts Used (comma-separated)</label>
+          <input type="text" id="new-parts" placeholder="e.g., Brake Pads - Front Set, Brake Fluid, Valve Stems">
+        </div>
+      </div>
+      <div class="form-row" style="grid-template-columns: auto auto;">
+        <button onclick="saveNewRepair()">✅ Save Repair</button>
+        <button onclick="toggleRepairForm()" style="background:#999;">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+async function saveNewRepair() {
+  const cart = document.getElementById('new-cart').value.trim();
+  const date = document.getElementById('new-date').value;
+  const description = document.getElementById('new-description').value.trim();
+  const partsStr = document.getElementById('new-parts').value.trim();
+  const tech = document.getElementById('new-tech').value.trim();
+  
+  if (!cart || !date || !description) {
+    alert('Please fill in Cart Number, Date, and Description');
+    return;
+  }
+  
+  const parts = partsStr
+    .split(',')
+    .map(p => p.trim())
+    .filter(p => p.length > 0);
+  
+  try {
+    updateStatus('syncing');
+    console.log("Saving repair to Firestore...");
+    
+    await repairsCol.add({
+      cartNum: cart,
+      date: date,
+      description: description,
+      parts: parts,
+      tech: tech,
+      createdAt: new Date().toISOString()
+    });
+    
+    console.log("✅ Repair saved to Firestore");
+    alert('✅ Repair saved! (Syncing across all devices)');
+    toggleRepairForm();
+    document.getElementById('search').value = '';
+    updateStatus('online');
+    
+  } catch (error) {
+    console.error("Error saving repair:", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+  }
+}
+
+async function deleteRepair(id) {
+  if (!confirm('Delete this repair record?')) return;
+  
+  try {
+    updateStatus('syncing');
+    console.log("Deleting repair:", id);
+    
+    await repairsCol.doc(id).delete();
+    
+    console.log("✅ Repair deleted");
+    updateStatus('online');
+    
+  } catch (error) {
+    console.error("Error deleting repair:", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+  }
+}
+</script>
+
+</body>
+</html>
