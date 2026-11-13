@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf Cart Repair Log — Fripp Island Excursions</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; font-family: 'Outfit', sans-serif; background: #f5f5f5; }
+body { padding: 20px; }
+.container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+.header { background: linear-gradient(135deg, #060f1e 0%, #0B1E3D 100%); padding: 24px; color: white; border-bottom: 3px solid #D4AF37; }
+.header h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.header p { font-size: 13px; color: rgba(255,255,255,0.7); }
+.header-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.meta-item { font-size: 12px; color: rgba(255,255,255,0.6); }
+.meta-item strong { color: #D4AF37; display: block; font-size: 14px; margin-bottom: 2px; }
+.status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.status-online { background: #22c55e; color: white; }
+.status-syncing { background: #f59e0b; color: white; }
+
+.controls { padding: 16px 24px; display: flex; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #eee; align-items: center; }
+.controls input, .controls button { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: inherit; }
+.controls input { flex: 1; min-width: 200px; }
+.controls button { background: #0B1E3D; color: white; border: none; font-weight: 600; cursor: pointer; }
+.controls button:hover { background: #0d2847; }
+
+.content { padding: 24px; overflow-y: auto; height: calc(100vh - 300px); }
+.repair-card { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.repair-card:hover { background: #fafbff; border-color: #0B1E3D; }
+.repair-header { display: grid; grid-template-columns: 1fr 1fr 1fr auto auto auto; gap: 16px; margin-bottom: 12px; align-items: center; }
+.invoice-check { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; font-size: 12px; font-weight: 600; color: #666; cursor: pointer; white-space: nowrap; user-select: none; }
+.invoice-check input { width: 16px; height: 16px; cursor: pointer; accent-color: #16a34a; }
+.invoice-check.checked { background: #dcfce7; border-color: #16a34a; color: #166534; }
+.repair-card.invoiced { border-left: 4px solid #16a34a; }
+.add-part { display: flex; gap: 6px; margin-top: 8px; }
+.add-part input { flex: 1; max-width: 320px; padding: 5px 8px; border: 1px solid #c5d9f1; border-radius: 4px; font-family: inherit; font-size: 11px; }
+.add-part input.add-qty { flex: 0 0 56px; width: 56px; max-width: 56px; text-align: center; }
+.add-part button { padding: 5px 10px; background: #0B1E3D; color: white; border: none; border-radius: 4px; font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.report { background: #fffdf5; border: 2px solid #D4AF37; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+.report h3 { font-size: 14px; color: #0B1E3D; margin-bottom: 10px; }
+.report-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; font-size: 12px; color: #333; }
+.report-filters input { padding: 5px 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 12px; }
+.report-filters button { padding: 5px 10px; background: #eee; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 11px; cursor: pointer; }
+.report table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.report th { text-align: left; padding: 6px 8px; color: #666; font-weight: 600; border-bottom: 2px solid #e5e5e5; }
+.report td { padding: 7px 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+.report td.num, .report th.num { text-align: right; }
+.report tr.total td { font-weight: 700; border-top: 2px solid #e5e5e5; border-bottom: none; }
+.report .bar-track { background: #eee; border-radius: 3px; height: 10px; min-width: 80px; }
+.report .bar-fill { background: #0B1E3D; border-radius: 3px; height: 10px; }
+.report .carts { color: #666; font-size: 11px; }
+.suggestions { max-width: 420px; background: white; border: 1px solid #c5d9f1; border-radius: 4px; margin-top: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+.suggestions:empty { display: none; }
+.suggestion { padding: 7px 10px; font-size: 12px; color: #0B1E3D; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+.suggestion:last-child { border-bottom: none; }
+.suggestion:hover { background: #e8f1ff; }
+.suggestion.custom { color: #666; font-style: italic; }
+.part-tag { display: inline-flex; align-items: center; gap: 6px; }
+.part-tag .qty { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.part-tag .qty button { width: 18px; height: 18px; padding: 0; line-height: 1; border: 1px solid #c5d9f1; border-radius: 3px; background: white; color: #0B1E3D; font-size: 12px; font-weight: 700; cursor: pointer; }
+.part-tag .remove { cursor: pointer; font-weight: 700; color: #b91c1c; padding: 0 2px; }
+.report h4 { font-size: 13px; color: #0B1E3D; margin: 18px 0 8px; }
+.report .pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; margin-right: 8px; }
+.report .pill.yes { background: #dcfce7; color: #166534; }
+.report .pill.no { background: #fee2e2; color: #991b1b; }
+.report .note { color: #999; font-size: 11px; }
+@media print { .part-tag .qty button, .part-tag .remove { display: none; } }
+@media print { .suggestions { display: none; } }
+.checklist-section { margin-top: 16px; padding-top: 14px; border-top: 2px dashed #d5d5d5; }
+.checklist { background: white; border: 1px solid #e0e0e0; border-radius: 6px; }
+@media print { .add-part { display: none; } }
+.checklist summary { padding: 10px 12px; font-size: 12px; font-weight: 600; color: #0B1E3D; cursor: pointer; user-select: none; }
+.checklist summary .check-count { float: right; background: #eee; color: #666; padding: 1px 8px; border-radius: 10px; font-size: 11px; }
+.checklist summary .check-count.done { background: #dcfce7; color: #166534; }
+.checklist-items { padding: 4px 12px 10px; border-top: 1px solid #eee; }
+.checklist-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; cursor: pointer; }
+.checklist-item + .checklist-item { border-top: 1px solid #f3f3f3; }
+.checklist-item input { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; cursor: pointer; accent-color: #16a34a; }
+.checklist-item strong { display: block; font-size: 12px; color: #0B1E3D; }
+.checklist-item span { display: block; font-size: 11px; color: #666; line-height: 1.4; }
+.cart-num { background: #D4AF37; color: #000; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 14px; text-align: center; }
+.repair-date { color: #666; font-size: 12px; font-weight: 500; }
+.repair-tech { color: #0B1E3D; font-size: 12px; font-weight: 600; }
+
+.repair-description { background: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #0B1E3D; }
+.repair-description strong { display: block; font-size: 12px; color: #0B1E3D; margin-bottom: 4px; }
+.repair-description p { font-size: 12px; color: #333; line-height: 1.5; }
+
+.parts-section { }
+.parts-section strong { display: block; font-size: 12px; color: #0B1E3D; margin-bottom: 6px; }
+.parts-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.part-tag { background: #e8f1ff; color: #0B1E3D; padding: 4px 10px; border-radius: 4px; font-size: 11px; border: 1px solid #c5d9f1; }
+
+.empty { text-align: center; padding: 40px 20px; color: #999; }
+.empty p { font-size: 14px; margin-bottom: 8px; }
+
+.footer { padding: 16px 24px; background: #f9f9f9; border-top: 1px solid #eee; font-size: 11px; color: #999; display: flex; justify-content: space-between; }
+
+@media print {
+  body { padding: 0; }
+  .container { box-shadow: none; border-radius: 0; }
+  .controls { display: none; }
+  .content { height: auto; overflow: visible; }
+}
+
+.add-repair-form { background: #f0f5ff; padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 2px dashed #0B1E3D; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-row label { display: block; font-size: 11px; font-weight: 600; color: #0B1E3D; margin-bottom: 4px; }
+.form-row input, .form-row textarea, .form-row button { padding: 8px; border: 1px solid #0B1E3D; border-radius: 4px; font-family: inherit; font-size: 12px; }
+.form-row textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+.form-row button { background: #0B1E3D; color: white; border: none; font-weight: 600; cursor: pointer; }
+.form-row button:hover { background: #0d2847; }
+
+.loading { text-align: center; padding: 20px; color: #999; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #0B1E3D; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🛠️ Golf Cart Repair Log</h1>
+    <p>Fripp Island Excursions — Shared Maintenance Record</p>
+    <div class="header-meta">
+      <div class="meta-item"><strong id="today-date"></strong></div>
+      <div class="meta-item"><strong id="total-repairs">0</strong> Total Repairs</div>
+      <div class="meta-item"><strong id="carts-serviced">0</strong> Carts Serviced</div>
+      <div class="meta-item"><span class="status-badge status-online" id="status">🟢 Connected</span></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search by cart number, description, or parts..." onkeyup="filterRepairs()">
+    <button onclick="window.print()">🖨️ Print</button>
+    <button onclick="toggleReport()">📊 Report</button>
+    <button onclick="toggleRepairForm()">➕ Add Repair</button>
+  </div>
+
+  <div class="content">
+    <div id="add-form-container"></div>
+    <div id="report-container"></div>
+    <div id="repairs-container"><div class="loading"><div class="spinner"></div><p style="margin-top:10px;">Loading repairs...</p></div></div>
+  </div>
+
+  <div class="footer">
+    <span>Last updated: <strong id="last-updated">Just now</strong></span>
+    <span>Synced across all devices • Fripp Island Excursions © 2026</span>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// Firebase Init
+firebase.initializeApp({
+  apiKey: "AIzaSyAdtX5u800u0Ga10wlfQDvM0L8ISu6SDn0",
+  authDomain: "fripp-tracker-67699.firebaseapp.com",
+  projectId: "fripp-tracker-67699",
+  storageBucket: "fripp-tracker-67699.firebasestorage.app",
+  messagingSenderId: "946287408816",
+  appId: "1:946287408816:web:732cd0b97cd95a972f2d75"
+});
+
+const db = firebase.firestore();
+const repairsCol = db.collection("golf_cart_repairs");
+
+let repairs = [];
+let formVisible = false;
+
+// Load repairs on page load
+window.addEventListener('load', () => {
+  console.log("App loaded - connecting to Firestore");
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  
+  // Listen for real-time updates
+  repairsCol.orderBy('date', 'desc').onSnapshot(
+    (snapshot) => {
+      console.log("Real-time update: ", snapshot.size, "repairs");
+      repairs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      renderRepairs();
+      renderReport();
+      updateStats();
+      updateStatus('online');
+    },
+    (error) => {
+      console.error("Real-time listener error:", error);
+      updateStatus('error');
+      alert("Connection error: " + error.message);
+    }
+  );
+});
+
+// Dates are saved as YYYY-MM-DD; read them as local dates so they don't show a day early
+function formatDate(d) {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(d + 'T00:00:00') : new Date(d);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function updateStatus(status) {
+  const badge = document.getElementById('status');
+  if (status === 'online') {
+    badge.textContent = '🟢 Connected';
+    badge.className = 'status-badge status-online';
+  } else if (status === 'syncing') {
+    badge.textContent = '🟡 Syncing...';
+    badge.className = 'status-badge status-syncing';
+  } else {
+    badge.textContent = '🔴 Offline';
+    badge.className = 'status-badge';
+  }
+}
+
+function updateLastUpdated() {
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  document.getElementById('last-updated').textContent = time;
+}
+
+function updateStats() {
+  document.getElementById('total-repairs').textContent = repairs.length;
+  const uniqueCarts = new Set(repairs.map(r => r.cartNum)).size;
+  document.getElementById('carts-serviced').textContent = uniqueCarts;
+}
+
+let editingId = null;
+let editDraft = {};
+
+function renderEntryTop(r) {
+  return `
+      <div class="repair-header">
+        <div class="cart-num">Cart #${r.cartNum}</div>
+        <div class="repair-date">📅 ${formatDate(r.date)}</div>
+        <div class="repair-tech">👤 ${r.tech || 'Unassigned'}</div>
+        <label class="invoice-check${r.invoiced ? ' checked' : ''}">
+          <input type="checkbox" ${r.invoiced ? 'checked' : ''} onchange="toggleInvoiced('${r.id}', this.checked)">
+          Invoiced
+        </label>
+        <button onclick="startEdit('${r.id}')" style="background:#0B1E3D;color:white;border:none;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">✏️ Edit</button>
+        <button onclick="deleteRepair('${r.id}')" style="background:#f5f5f5;border:1px solid #ddd;padding:6px 8px;border-radius:4px;cursor:pointer;font-size:12px;">Delete</button>
+      </div>
+      <div class="repair-description">
+        <strong>What Was Done:</strong>
+        <p>${r.description}</p>
+      </div>`;
+}
+
+// The edit form is drawn from editDraft so typing survives a live refresh from another device
+function renderEditForm(r) {
+  return `
+      <div class="add-repair-form" style="margin-bottom:12px;">
+        <h3 style="font-size:14px;margin-bottom:12px;color:#0B1E3D;">Edit Repair</h3>
+        <div class="form-row">
+          <div>
+            <label>Cart Number *</label>
+            <input type="text" maxlength="3" value="${esc(editDraft.cartNum)}" oninput="editDraft.cartNum = this.value">
+          </div>
+          <div>
+            <label>Date *</label>
+            <input type="date" value="${esc(editDraft.date)}" oninput="editDraft.date = this.value">
+          </div>
+          <div>
+            <label>Technician</label>
+            <input type="text" value="${esc(editDraft.tech)}" oninput="editDraft.tech = this.value">
+          </div>
+        </div>
+        <div class="form-row full">
+          <div>
+            <label>Category (used by the report)</label>
+            <select style="padding:8px;border:1px solid #0B1E3D;border-radius:4px;font-family:inherit;font-size:12px;" onchange="editDraft.category = this.value">
+              <option value=""${editDraft.category ? '' : ' selected'}>Auto-detect from description</option>
+              ${CATEGORIES.map(c => `<option${c.name === editDraft.category ? ' selected' : ''}>${c.name}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div>
+            <label>Description of Work Done *</label>
+            <textarea style="width:100%;" oninput="editDraft.description = this.value">${esc(editDraft.description)}</textarea>
+          </div>
+        </div>
+        <div class="form-row" style="grid-template-columns: auto auto;">
+          <button onclick="saveEdit()">✅ Save Changes</button>
+          <button onclick="cancelEdit()" style="background:#999;">Cancel</button>
+        </div>
+      </div>`;
+}
+
+function startEdit(id) {
+  const r = repairs.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  editDraft = { cartNum: r.cartNum || '', date: r.date || '', tech: r.tech || '', description: r.description || '', category: r.category || '' };
+  renderRepairs();
+}
+
+function cancelEdit() {
+  editingId = null;
+  renderRepairs();
+}
+
+async function saveEdit() {
+  const changes = {
+    cartNum: editDraft.cartNum.trim(),
+    date: editDraft.date,
+    tech: editDraft.tech.trim(),
+    description: editDraft.description.trim(),
+    category: editDraft.category
+  };
+  if (!changes.cartNum || !changes.date || !changes.description) {
+    alert('Please fill in Cart Number, Date, and Description');
+    return;
+  }
+  try {
+    updateStatus('syncing');
+    await repairsCol.doc(editingId).update(changes);
+    editingId = null;
+    updateStatus('online');
+    renderRepairs();
+  } catch (error) {
+    console.error("Error saving changes:", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+  }
+}
+
+function renderRepairs() {
+  const container = document.getElementById('repairs-container');
+  
+  if (!repairs.length) {
+    container.innerHTML = '<div class="empty"><p>📭 No repairs logged yet.</p><p>Click "➕ Add Repair" to create your first entry.</p></div>';
+    return;
+  }
+  
+  container.innerHTML = repairs.map(r => `
+    <div class="repair-card${r.invoiced ? ' invoiced' : ''}" data-search="${encodeURIComponent(searchText(r))}">
+      ${r.id === editingId ? renderEditForm(r) : renderEntryTop(r)}
+      <div class="parts-section">
+        <strong>Parts Used:</strong>
+        <div class="parts-list">
+          ${(r.parts || []).map((p, i) => `<span class="part-tag">${esc(p)}<span class="qty"><button title="One fewer" onclick="changeQty('${r.id}', ${i}, -1)">−</button>Qty ${qtyOf(r, p)}<button title="One more" onclick="changeQty('${r.id}', ${i}, 1)">+</button></span><span class="remove" title="Remove this part" onclick="removePart('${r.id}', ${i})">✕</span></span>`).join('')}
+        </div>
+        <div class="add-part">
+          <input type="text" id="add-part-${r.id}" placeholder="Type a few letters to search inventory..." autocomplete="off" oninput="showSuggestions('${r.id}')" onblur="hideSuggestions('${r.id}')" onkeydown="if(event.key==='Enter')addParts('${r.id}')">
+          <input type="number" class="add-qty" id="add-qty-${r.id}" value="1" min="1" title="Quantity" aria-label="Quantity">
+          <button onclick="addParts('${r.id}')">➕ Add Part</button>
+        </div>
+        <div class="suggestions" id="suggest-${r.id}"></div>
+      </div>
+      <div class="checklist-section">${renderChecklist(r)}</div>
+    </div>
+  `).join('');
+
+  filterRepairs();
+  updateLastUpdated();
+}
+
+const CATEGORIES = [
+  { name: 'Brakes', words: ['brake', 'pedal', 'caliper', 'rotor', 'drum'] },
+  { name: 'Tires & Front End', words: ['tire', 'wheel', 'valve stem', 'front end', 'alignment', 'tie rod', 'steering', 'spindle', 'bushing', 'shock', 'suspension', 'hub'] },
+  { name: 'Electrical & Battery', words: ['battery', 'batteries', 'light', 'wire', 'wiring', 'fuse', 'charger', 'switch', 'solenoid', 'controller', 'horn', 'cable', 'electrical', 'usb', 'accessor'] },
+  { name: 'Motor & Drivetrain', words: ['motor', 'engine', 'belt', 'clutch', 'axle', 'differential', 'transmission', 'throttle', 'accelerator', 'carb', 'fuel', 'oil', 'spark'] },
+  { name: 'Body & Roof', words: ['roof', 'body', 'seat', 'windshield', 'mirror', 'bumper', 'fender', 'cowl', 'canopy', 'strut', 'floor mat', 'cup holder', 'basket'] },
+  { name: 'Other', words: [] }
+];
+let reportVisible = false;
+let reportFrom = '';
+let reportTo = '';
+
+function guessCategory(r) {
+  const text = ((r.description || '') + ' ' + (r.parts || []).join(' ')).toLowerCase();
+  let best = 'Other', bestHits = 0;
+  CATEGORIES.forEach(c => {
+    const hits = c.words.filter(w => text.includes(w)).length;
+    if (hits > bestHits) { best = c.name; bestHits = hits; }
+  });
+  return best;
+}
+
+function effectiveCategory(r) {
+  return CATEGORIES.some(c => c.name === r.category) ? r.category : guessCategory(r);
+}
+
+function searchText(r) {
+  const date = formatDate(r.date);
+  return ['cart #' + r.cartNum, date, r.tech || 'unassigned', r.description || '', (r.parts || []).join(' '), effectiveCategory(r), r.invoiced ? 'invoiced' : 'not invoiced'].join(' ').toLowerCase();
+}
+
+async function setCategory(id, category) {
+  try {
+    updateStatus('syncing');
+    await repairsCol.doc(id).update({ category: category });
+    updateStatus('online');
+  } catch (error) {
+    console.error("Error updating category:", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+    renderRepairs();
+  }
+}
+
+function toggleReport() {
+  reportVisible = !reportVisible;
+  renderReport();
+}
+
+function setReportRange(from, to) {
+  reportFrom = from;
+  reportTo = to;
+  renderReport();
+}
+
+function renderReport() {
+  const container = document.getElementById('report-container');
+  if (!reportVisible) { container.innerHTML = ''; return; }
+
+  const inRange = repairs.filter(r => (!reportFrom || r.date >= reportFrom) && (!reportTo || r.date <= reportTo));
+  const total = inRange.length;
+  const rows = CATEGORIES.map(c => {
+    const list = inRange.filter(r => effectiveCategory(r) === c.name);
+    const carts = [...new Set(list.map(r => r.cartNum))].sort();
+    return { name: c.name, count: list.length, carts: carts, open: list.filter(r => !r.invoiced).length };
+  }).filter(row => row.count > 0).sort((a, b) => b.count - a.count);
+
+  container.innerHTML = `
+    <div class="report">
+      <h3>📊 Repairs by Category</h3>
+      <div class="report-filters">
+        From <input type="date" value="${reportFrom}" onchange="setReportRange(this.value, reportTo)">
+        To <input type="date" value="${reportTo}" onchange="setReportRange(reportFrom, this.value)">
+        <button onclick="setReportRange('', '')">All dates</button>
+      </div>
+      ${total ? `
+      <table>
+        <tr><th>Category</th><th class="num">Repairs</th><th class="num">Share</th><th></th><th>Carts</th><th class="num">Not invoiced</th></tr>
+        ${rows.map(row => `
+        <tr>
+          <td><strong>${row.name}</strong></td>
+          <td class="num">${row.count}</td>
+          <td class="num">${Math.round(row.count / total * 100)}%</td>
+          <td><div class="bar-track"><div class="bar-fill" style="width:${row.count / total * 100}%"></div></div></td>
+          <td class="carts">${row.carts.map(c => '#' + c).join(', ')}</td>
+          <td class="num">${row.open}</td>
+        </tr>`).join('')}
+        <tr class="total">
+          <td>Total</td><td class="num">${total}</td><td class="num">100%</td><td></td>
+          <td class="carts">${new Set(inRange.map(r => r.cartNum)).size} carts</td>
+          <td class="num">${inRange.filter(r => !r.invoiced).length}</td>
+        </tr>
+      </table>
+      ${invoiceReport(inRange)}
+      ${partsReport(inRange)}` : '<p style="font-size:12px;color:#999;">No repairs in this date range.</p>'}
+    </div>
+  `;
+}
+
+function invoiceReport(list) {
+  const open = list.filter(r => !r.invoiced);
+  return `
+      <h4>🧾 Invoice Status</h4>
+      <p style="margin-bottom:10px;">
+        <span class="pill yes">Invoiced: ${list.length - open.length}</span>
+        <span class="pill no">Not invoiced: ${open.length}</span>
+      </p>
+      ${open.length ? `
+      <table>
+        <tr><th>Not invoiced yet</th><th>Date</th><th>Tech</th><th>Category</th><th>Work done</th></tr>
+        ${open.map(r => `
+        <tr>
+          <td><strong>Cart #${esc(r.cartNum)}</strong></td>
+          <td>${formatDate(r.date)}</td>
+          <td>${esc(r.tech || 'Unassigned')}</td>
+          <td>${effectiveCategory(r)}</td>
+          <td>${esc((r.description || '').length > 90 ? r.description.slice(0, 90) + '…' : (r.description || ''))}</td>
+        </tr>`).join('')}
+      </table>` : '<p class="note">Every repair in this date range has been invoiced.</p>'}`;
+}
+
+function partsReport(list) {
+  const known = new Set(INVENTORY.map(n => n.toLowerCase()));
+  const totals = {};
+  list.forEach(r => (r.parts || []).forEach(name => {
+    const t = totals[name] || (totals[name] = { name: name, qty: 0, repairs: 0 });
+    t.qty += qtyOf(r, name);
+    t.repairs += 1;
+  }));
+  const rows = Object.values(totals).sort((a, b) => (b.qty - a.qty) || a.name.localeCompare(b.name));
+  if (!rows.length) return '<h4>🔧 Parts Used</h4><p class="note">No parts recorded in this date range.</p>';
+  return `
+      <h4>🔧 Parts Used</h4>
+      <table>
+        <tr><th>Part</th><th class="num">Quantity used</th><th class="num">Repairs</th></tr>
+        ${rows.map(t => `
+        <tr>
+          <td><strong>${esc(t.name)}</strong>${known.has(t.name.toLowerCase()) ? '' : ' <span class="note">(not in inventory)</span>'}</td>
+          <td class="num">${t.qty}</td>
+          <td class="num">${t.repairs}</td>
+        </tr>`).join('')}
+        <tr class="total"><td>Total</td><td class="num">${rows.reduce((n, t) => n + t.qty, 0)}</td><td></td></tr>
+      </table>`;
+}
+
+const CHECKLIST = [
+  { key: 'visual', title: 'Visual Safety Check', detail: 'Look for damage, leaks, loose parts, loose roof and other components, or hazards' },
+  { key: 'tires', title: 'Tire and Front End', detail: 'Check air pressure and front end' },
+  { key: 'brakes', title: 'Brake Test', detail: 'Test pedal feel and stopping power at low speed' },
+  { key: 'electrical', title: 'Electrical System', detail: 'Check battery, lights, and accessories' }
+];
+const openChecklists = new Set();
+
+function renderChecklist(r) {
+  const state = r.checklist || {};
+  const done = CHECKLIST.filter(c => state[c.key]).length;
+  return `
+      <details class="checklist" ${openChecklists.has(r.id) ? 'open' : ''} ontoggle="this.open ? openChecklists.add('${r.id}') : openChecklists.delete('${r.id}')">
+        <summary>📋 Checklist <span class="check-count${done === CHECKLIST.length ? ' done' : ''}">${done}/${CHECKLIST.length}</span></summary>
+        <div class="checklist-items">
+          ${CHECKLIST.map(c => `
+          <label class="checklist-item">
+            <input type="checkbox" ${state[c.key] ? 'checked' : ''} onchange="toggleChecklistItem('${r.id}', '${c.key}', this.checked)">
+            <div><strong>${c.title}</strong><span>${c.detail}</span></div>
+          </label>`).join('')}
+        </div>
+      </details>`;
+}
+
+const INVENTORY = ["10\" Revolver Wheels with AT3026 Tires", "10\" Spider Wheels With Stinger Hybrid Tires", "10\" Vampire wheel- Stinger Hybrid Tires", "10001080 - Center Rearview Mirror Kit", "10002842 Battery bolts", "10005649 Strut Assembly", "10009094 Main Harness", "10009760 - Split Windshield Kit- Hauler", "10011017 - Split Windshield Kit TX S4", "10013533 Fender Flares", "10015643 RXV Brushguard", "10016052 - Cargo Rack", "10020145- Windshield- Toro", "10020146 - Split Windshield (Tinted) RXV Refresh", "10029112 Golf Bag Holder", "10031854 - internal receptacle", "10035774 Mounting- Sound Bar", "10044252 - Acc Mounting Bracket", "10045550 - 2 Bag Attachment", "10046050 Grille- Short", "10046153 RXV Fender Flares", "10050513 Sound Bar Mount", "10052121 - 36V-48V Potted DC/DC Converter", "10094159G01 Extension top- Black", "116\" Black Top- Accident", "116-in enclosure kit(black)", "12 Volt Interstate Battery- Cart Battery", "12 Volt Relay", "12 Volt Side Post Battery- Interstate", "12\" rally wheels Stinger tires", "120 Volt Cord End", "14\" TIRE-22\"x10.5\"-14\" GATOR HYBRID TY3113", "14\" Venom / Hellfire tires", "15 Foot Charging cord- For Lithium Install", "18 INCH Soundbar 10072744", "19 Spline High Speed Series Motor- EZGO", "205-40-14", "205/30-14 Low Profile", "205/50/10 tire only", "205/65/10 Tire only", "20A 125V AC charging port", "20oz Tumbler", "20x10x10 Tire Only", "20x8x10 Tire and rim combo", "215-35-14 Tire Only", "215-40-12 Rim and Tire Set- Black Steel", "215/35R-14 Tires", "215/35r14 Tire set", "215/40-12 Steeling P825 Street Tire", "22x11x10 Tire only", "23x10R14 Paramount Tire EZGO", "23x10R14 PMT Villian Wheel Combo", "23x10x12 All Terrain", "23x10x14 All Terrain", "23x10x14 Ironclad AT", "27 series Battery", "33639G01 - Keyed Ignition Switch", "4 Pole Speed sensor", "4\" SGC A-Arm Lift Kit-Club Car 2004-UP", "48 volt cut of switch", "48 Volt soleniods", "48V Solenoid Club Car", "5/16 Battery Wire End", "6 Passenger Seat Belt Kit- NAT", "6 Volt NAPA #8144", "6\" SGC A-Arm Lift Kit-Club Car 2004-UP", "6004 - bearing", "6005 Wheel Bearing", "603510 - NGGC Head Gasket", "603513 Valve cover gasket", "603599 Exhaust Gasket", "605807 Foward/Reverse cable", "605809 - FNR Push Pull Cable (Long Wheel Base)", "606235 Starter Bolt", "607955 Carburetor", "608618 - Accelorator Cable Assembly (Long Wheel Base)", "611283 Electric Key Switch", "627140- TXT Lift kit", "635005 - 1-in. Strut Set", "651897G03 Toggle headlight switch", "653072 4 Position Key Switch- EZGO", "658022 Throttle Body", "658940 - 12V Sealed Pedal Harness", "660379 - Starter Generator", "660379 Starter", "673527- On Board Charger Receptacle", "689928G01-Rocker Panel w/ Sill (Right-Hand Side)", "689928G02-Rocker Panel w/ Sill (Left-Hand Side)", "699755 Starter Bracket", "70580G02 Intermediate Shaft", "70602g06 Black seat cover", "70803G01- L/S spindle Assembly", "70964G01 Steering Rack", "72 Volt RowPow Charger", "72V EZGO Controller", "72V State of Charge Meter", "74604G01- Tie Rod- EZGO 30\"", "8 inch Hub Cap Set", "8 Volt Napa #8148", "8\" Kenda Tire", "Accel Cables 608608", "Accel Pedal Jumper Harness Switch 615747", "Accelerator Cable - 608618 - long wheel base", "Accelerator Pedal Box - 606990", "accelerator rod - gas 72072g01", "Accessory Mounting Bracket Kit - 10010870", "Air Filter", "Allied - Lithium Battery Package", "allied battery charger", "Alpha LED Headlamp", "Axle Nut- Club Car", "Axle seal", "Ball Stud - 72732g01", "Battery Bottle", "Battery J Bolt", "Battery Terminals", "Battery Watering System", "Bearing 6205", "Bearing- Cam", "Bicycle Ornament", "BigBattery 48V Lithium Battery-- 12 warranty", "Bike Tube", "Bintelli Intermediate shaft", "Bintelli Seat Belt", "Bintelli Spare Key", "Bintelli Steering Gear", "BIOFUSE 2.0 MASK", "BIOFUSE EARPLUG - CLEAR/FLURO TANGERINE", "BIOFUSE EARPLUG - USA CHARCOAL/POOL", "BIOFUSE NOSECLIP - POOL BLUE/USA CHARCOAL", "Black Lug nuts", "Black SS Cap", "BPR2ES Spark Plug", "Brake Adjustment Assembly", "Brake Compensator Assembly EZGO", "Brake Light Pad", "Brush Guard EZGO 10091516", "Brush Guard- Accident", "Bulk Battery Wires", "Bushing Club Car - Front", "Bushing Club Car -Rear", "Bushing Rear EZGO", "Bushing Sleeve", "Camelot Left side spindle", "Candy Canes- Struts", "Canopy Bracket", "Carb Choke Gasket- 603593", "Carb Gasket - EZGO Kawasaki 603580", "Carolina Yamaha G29 Rear Seat Kit- Sandstone", "Cart Cover- Persons", "CC Belt Set", "CC Prec LED Light Kit", "CC Prec. Front Rails", "CC Prec. Inside Baskets", "CC prec. used front end assy", "CC Rear Springs", "CC Windshield Vented", "CC Windshield- Tinted", "CCDS LIFT KIT- CODY", "CCVented Windshield", "Center Cap- Chrome", "CH-Brake Pad", "Chamineak- New Top, Front Strut Bar, BrushGuard", "Chappy Charging Cable", "Chappy Solenoid", "Chordes Cart Cover", "CitiCar Master Cylinder", "Club Car 4 Pin Ignition Switch", "Club Car Axle Seal set", "Club Car Brake Cable set", "Club Car Charger CHCC01", "Club Car Charger OEM", "Club Car CLutch Set", "Club car DS Charging port and receptacle", "Club Car DS High/ Low Kit", "Club Car DS Light Kit", "Club Car DS MCOR 4 Conversion Kit", "Club Car Executive Seat kit Gray", "Club Car Foward/Reverse Switch", "Club Car Golf attachment", "Club Car Hub Front assy", "Club Car Key", "Club Car Onward Key Switch", "Club car Pedal Assembly", "Club Car Prec. Bracket RP", "Club Car Prec. Key Switch Elec.", "Club Car Prec. Key Switch Gas", "Club Car Prec. rear seats stone", "Club Car Precedent Decal", "Club Car Precedent Heavy duty leaf spring kit", "Club Car Precedent Windshield Clear", "Club Car Precedent Windshield Tinted", "Club Car Pres LED Front Light", "Club Car Rear Hub Kit", "Club Car Right Side Tail Light", "Club Car Steering Column", "CLub Car Steering Rack", "Club Car Tan Top", "Club Car Tow Switch", "Club Car Unique Key Switch", "Club Cart rail kits", "Clutch Secondary", "Coil 670119", "Control Cable Assembly", "Cooler Insert", "Cowl", "Cowl, Bright White - Express L6 - 648566G0038", "Crossmember 10007865", "Cushman 2+2 S4 Windshield 113-333", "Custom Seat Belt kit", "DC-DC converter 20A", "Delete", "Deluxe Light Kit w/ Bucket", "Double Micro", "Double stack Lithium- Piper", "Double Taje Footplate And Grab Bar", "Drive 2 Seat back support bracket", "Drive belt - Yamaha Drive", "Drive Belt 10068244", "DS Drive Belt", "DS Rear Seat Kit", "DS Rear Seat Kit- White", "EGO Hauler Hub Assembly", "Electric Motor EZGO/Yamaha", "Electric Rear Hub", "Electrical Motor Brake 10015818", "ELiTE Charger Gen2 - 10009053G03", "Engine Harness 659426", "Equalizer Rod set", "Evolution Battery SOC harness", "Exec. Long Rail Kit", "Executive Rear Seat Kit", "Executive Rear Seat Kit-", "Exhaust Gasket", "ExoGear 28 Inch Soundbar", "Express 6 Rain Cover", "Express S4 Front and Back Floor Mats -10093346 & 10093352", "Ezgo Battery Hold Down", "EZGO Bushing repair kit", "EZGO Charging Port- Oval", "EZGO Controller", "EZGO electric brake drum", "EZGO front Fascia", "EZGO Front Hub Assembly", "EZGO Fuel Gauge 612314", "EZGO Fuel Pump", "EZGO Gas Brake Drum", "EZGO Gear Box", "EZGO Heavy duty spring kit", "EZGO Ignition Key Blank", "EZGO Key", "Ezgo Name Plate", "EZGO Outside Baskets", "EZGO Rear Seat Cushions- Black", "EZGO Run/Tow Switch", "EZGO RXV Charging Receptacle 10038492", "EZGO Sport Bumper 10011518", "EZGO starter/Generator-AMAZON", "EZGO TAN Lower Seat Cushion", "EZGO windshield", "EZGO- Front Seat Cushions- Black", "EZGO-Cowl", "FNR Cable - 603615", "FNR Switch CC", "FNR Switches- ezgo", "Foot Plate Bracket", "Front Axle Weldment - 10013964", "Front Axle- Accident", "Front Roof Strut- Accident", "Front Shock Absorber Kit", "Fuel Filter - Napa", "Fuel Pump - EZGO Kawasaki", "Gear Oil", "Generator Belt Gas 630587", "Golf cart cover 6 passenger - amy parsons", "Golf cart cover- 6 Passenger", "Golf Cart Ornament", "Golf cart plate", "Governor Cable", "Grab Bar EZGO (small) - 1007798", "Grab Bar EZGO (Wide)", "Grille- Front Ezgo", "Hauler Windshield 10009760", "HD Golf cart rear leaf spring kit", "HD Leaf Springs", "Headlight Bulbs", "Headlight Harness", "headlight kit ezgo halo", "Headlight Switch- pull out", "Hellfire 23x10.5x14 Tires", "High Speed Motor CC", "Horn 48V", "Horn Button", "Hub Assembly- Cam", "HYDROSITY 2.0 - BLACK / OXID GREY / SMK", "HYDROSITY 2.0 Googles- Blue", "Igloo Cooler", "Inductive throttle sensor 647278", "Inferno Red Paint", "Inner Shim 21809G1 gas", "Input shaft and seal", "Insulated Busbar 697427", "IQ Controller - Club Car DS", "ITS EZGO 2 Pin", "ITS Pedal Box", "JR ADVENTURE MASK - BLUE", "JUNIOR ADVENTURE MASK- pink", "JUNIOR BIOFUSE 2.0 MASK", "Kawasaki Exhaust Manifold", "Key Switch Rivets", "KIDS SUNNY G POP SEASIDERS PRINT - USA Googles", "KIDS SUNNY G SEASIDERS- Blue", "Kozip TXT Brown seat set", "Kroozie2.0 _Black", "Kroozie2.0 _Blue", "Kroozie2.0 _Hot Pink", "Kroozie2.0 _Sea Foam", "L/H Spindle assembly", "LED Light Bulb - Axium (2 Pack)", "LED Side Mirror", "LH Prec. Cables", "LH Strut Cover-10048045G01", "Liberty Cart Cover", "Liberty Chair Rack", "Liberty Front Roof Strut", "Liberty Headlight 651411G04", "Liberty On Board Charger", "Liberty Seat Back 10046624G19", "Liberty Seat Belt kit- 10038050", "Liberty Seat Bottom 629269G3414", "Liberty Side Mirrors", "Lift Kit RXV 4\" 3.0", "Limit Switch", "Limit Switch - 72736g01", "Lock Nut - 601709 EZGO GAS", "MCOR 2", "MCOR-4", "MG - 26/10/10", "MG - EZGO Temp Sensor", "MG - LH Brake Assy", "MG - Yamaha Speed Sensor", "MG-Battery Top Post NAPA", "MG-Brake Assy RH", "MG-Brake Drum Washer 606945", "MG-Carb FS4500", "MG-Charger Port Club Car", "MG-Charger Port Harness 673527", "MG-DSFNR Switch", "MG-Headlight Kit Club Car", "MG-Oil Seal 639738", "MG-Retus Rack Assy", "Micro switch black", "Mirror - 5 panel", "Mitchell- Seat Cushion", "Modz 36 Volt Lithium Battery", "Modz Club Car Battery Charger", "Muffler assembly- 695386", "NamePlate-10011930", "Napa Oil Filter", "Navitas TSX Controller", "New Pull off Rims- !2Inch", "NGK CR4HSA Spark Plug", "Oil", "OS TXT Light Kit", "Park Brake Latch Kit Prec. and DS", "Pedal Box Assembly 660447", "pedal micro 25861g01", "Pedal Switch", "PF12031 Rear fender flares", "Platinum Cowl", "Precedent Black Seat cushions", "Precedent Front Lower Cushion", "Precedent Rear seat Kit- White", "Precedent Steering Rack", "Premium Steering Wheel - 602980", "PRNTD NPRN SWM VST 430- Swim Vest Blue", "PRNTD NPRN SWM VST 800- Swim Vest Pink", "Rear Axle Bearing Kit", "Rear Bearing -Gas EZGO 6205", "Rear Brake Drums for Club Car Precedent (2)", "Rear Footplate", "Rear Footrest kit", "Rear Grab Bar for Seat kit", "Rear Leaf SPring Kit - Club Car", "Rear Leaf Spring set", "Rear Safety Bar - Universal", "Rear seat bottom assembly 699321G04", "Rear Seat Cushion - Club Car- Gray", "Rear Seat Kit 10027402", "Rear Shocks- Club car", "Receiver Hitch 10030068", "Refresh Windshield", "remove", "Revolver w Stinger 10\" Tires", "Robins clutch assembly", "Roy Pow Cord", "Roy Pow Lithium Battery", "roy pow on board charging port", "Roy Pow On board receptacle", "RoyPow Charger Plug", "Run/Tow switch ezgo", "RXV back rack", "RXV Controller", "RXV Fascia Bumper 10034004", "RXV Refresh windshield-TORO", "RXV SOC fuel meter 612314", "rxv speed sensor kit 614252", "Samsung SDI Lithium Battery", "Scan Tool Cable", "Scorecard holder Assy - 607925", "SEAGRASS BIKE BASKET- Coral Sunset", "SEAGRASS BIKE BASKET- Costal Blue", "Seal- Cam", "Seat Back EZGO (gray) 10042640g102", "Seat Belt Kit- 4Pass 10033528", "Seat belt kit- 6 paasenger", "Seat Cushion Set- Sandstone", "Seatbelt/Pod kit", "Shibumi 2 Chair clip", "Shibumi Classic Chair- Pink", "Shibumi Classic Chair- Sea", "Shibumi Classic Chair- Sky", "Shibumi Classic Ocean Shade", "Shibumi Classic Sea Glass Shade", "Shibumi Classic Shade- Coral", "Shibumi Classic shade- Deep Water", "Shibumi Classic Sunset Shade", "Shibumi Mini Shade- Ocean", "Shibumi Shovel", "Shibumi Tall Chair- Sea", "Shibumi Tall Chair- Sky", "Shibumi XL Cup Holder", "Shifter Ball Ends", "Silverwolf EZGO Motor Conversion", "SKOOGLES- Googles- blue", "SKOOGLES- Pink Googles", "snap rings", "Snap Rings 26814G01", "Solenoid 12V", "Solenoid 48V 672554", "Soundbar 28\" Wired- Warranty", "SoundBar T- Bracket", "Spacer 1 inch kit 10010543", "Speed Sensor C Car -AM", "Speed Sensor Club Car DS", "Speed Sensor Harness 620422", "Spindle Assembly- Cam.", "Standard Brake Cable Set", "Standard Side View Mirrors", "starter belt - club car/ yamaha", "Starter Generator Belt 16548g1", "State of Charge Meter - 48V", "Steeleng 22x11x10 AT P334", "Steeleng 23x10.5x12 AT", "Steeleng CC 48V Charger", "Steeleng Yamaha Charger 48V", "Steering Box Assembly - 74605g01", "Steering Column- 70758G05", "Steering Rack Assembly- 10033613", "Stinger 23x10.5-14 Tire P3090", "Strut- Rental cart", "Summit Charger", "Summit Pigtail - Club Car", "Summit Pigtail - EZGO", "Summit Pigtail - EZGO Oval", "Summit Pigtail - Yamaha New", "Summit Pigtail - Yamaha Old", "SWIM STAR - FLUO GREEN SURF PENGUIN", "SWIM STAR Swimmies- Pink", "Takeoff Tire 4seat", "Tan 116 Top Kit- New Built", "Team Secondary Clutch", "Tempo Body Kit", "Throttle Body 658022", "Tie Rod - 70876g02", "Toro Drive Belt", "Toro Power Cord", "Toro V Belt", "TR1005 22x11-10 AT P334", "TR1203 22x10.5-12 Stinger", "TR1211 215/40-12", "TR1212 215/35-12", "TR1213 – STEELENG 215/50-12 Comfort Ride Street", "TR1403 23x10-14 AT", "Trailer hitch", "Trailer Hub", "Turn Signal", "Turn Signal EZGO - 615236", "Turn Signal Kit - 699044 8 pin connector kit", "turn signal kit - mg", "TXT Black Complete Seat Kit", "TXT black rear seat cushions- rentals", "TXT High Low LED light kit", "TXT Rear Tail Light kit", "TXT Refresh Windshield- 113-881C", "TXT Refresh Windshield- 113-881T", "TXT Tan Rear Seat cushions", "TXT Tan seat back- rentals", "TXT Tan seat bottom", "Unique Key Switch - EZGO", "Universal Seat Belt Kit - 10l0l", "USB Port", "Used Charger", "Used Club Car Differential", "Used Wheels & Tires", "Valve stem", "Vatrer On board charging port", "Venon Black Wheels with thunderbolt tires", "Volt Regulator-MG", "Voltage Regulator", "VR Sensor", "Wanda 215/35R14 Tire Set", "Warranty Battery", "Washer( Shock Absorber) - 10435g1", "Wide Bar Chair Rack", "Windshield DS new style-111-236", "WINDSHIELD MOAB VENTED FOR CCDS (2000-UP) TINTED", "yamaha air filter", "Yamaha Carb Gaskets", "Yamaha Choke cable", "Yamaha Drive 2 Carburetor", "Yamaha Drive 2 Windshield", "Yamaha Drive LED headlight kit- AM", "Yamaha Drive LED Light Kit", "Yamaha Front Hub", "Yamaha Fuel Pump", "Yamaha Input shaft seal", "Yamaha Key", "Yamaha lighting kit", "Yamaha Passenger Axle kit", "yamaha rear axle bearing", "yamaha snap rings (for rear axle bearing)", "Yamaha Starter", "yamaha tail light assembly", "Yamaha Tow/Run Switch", "Yamaha Windhshied"];
+let newParts = [];
+
+function esc(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function matchInventory(query) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (query.trim().length < 2) return [];
+  const hits = [];
+  INVENTORY.forEach((name, i) => {
+    const lower = name.toLowerCase();
+    if (words.every(w => lower.includes(w))) hits.push({ i: i, starts: lower.startsWith(words[0]) });
+  });
+  return hits.sort((a, b) => (b.starts - a.starts) || (a.i - b.i)).slice(0, 8).map(h => h.i);
+}
+
+function showSuggestions(ctx) {
+  const typed = document.getElementById('add-part-' + ctx).value.trim();
+  const box = document.getElementById('suggest-' + ctx);
+  if (typed.length < 2) { box.innerHTML = ''; return; }
+  const matches = matchInventory(typed);
+  const exact = matches.some(i => INVENTORY[i].toLowerCase() === typed.toLowerCase());
+  box.innerHTML = matches.map(i =>
+    `<div class="suggestion" onmousedown="event.preventDefault()" onclick="pickPart('${ctx}', ${i})">${esc(INVENTORY[i])}</div>`
+  ).join('') + (exact ? '' :
+    `<div class="suggestion custom" onmousedown="event.preventDefault()" onclick="addParts('${ctx}')">➕ Add "${esc(typed)}" (not in inventory)</div>`);
+}
+
+function hideSuggestions(ctx) {
+  setTimeout(() => {
+    const box = document.getElementById('suggest-' + ctx);
+    if (box) box.innerHTML = '';
+  }, 150);
+}
+
+function pickPart(ctx, index) {
+  document.getElementById('add-part-' + ctx).value = '';
+  document.getElementById('suggest-' + ctx).innerHTML = '';
+  saveParts(ctx, [INVENTORY[index]]);
+}
+
+function addParts(ctx) {
+  const input = document.getElementById('add-part-' + ctx);
+  const parts = input.value.split(',').map(p => p.trim()).filter(p => p.length > 0);
+  input.value = '';
+  document.getElementById('suggest-' + ctx).innerHTML = '';
+  if (parts.length) saveParts(ctx, parts);
+}
+
+function qtyOf(r, name) {
+  const q = r.partQty && r.partQty[name];
+  return q > 0 ? q : 1;
+}
+
+function renderNewParts() {
+  document.getElementById('new-parts-chips').innerHTML = newParts.map((p, i) =>
+    `<span class="part-tag">${esc(p.name)}<span class="qty"><button type="button" title="One fewer" onclick="newPartQty(${i}, -1)">−</button>Qty ${p.qty}<button type="button" title="One more" onclick="newPartQty(${i}, 1)">+</button></span><span class="remove" title="Remove this part" onclick="newParts.splice(${i}, 1); renderNewParts()">✕</span></span>`
+  ).join('');
+}
+
+function newPartQty(index, delta) {
+  newParts[index].qty = Math.max(1, newParts[index].qty + delta);
+  renderNewParts();
+}
+
+async function updateRepair(id, changes, what) {
+  try {
+    updateStatus('syncing');
+    await repairsCol.doc(id).update(changes);
+    updateStatus('online');
+  } catch (error) {
+    console.error("Error " + what + ":", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+    renderRepairs();
+  }
+}
+
+// Uses the number in the Qty box; adding a part that is already on the list adds to its quantity
+function saveParts(ctx, parts) {
+  const qtyBox = document.getElementById('add-qty-' + ctx);
+  const qty = Math.max(1, parseInt(qtyBox && qtyBox.value, 10) || 1);
+  if (qtyBox) qtyBox.value = 1;
+  if (ctx === 'new') {
+    parts.forEach(name => {
+      const existing = newParts.find(p => p.name === name);
+      if (existing) existing.qty += qty; else newParts.push({ name: name, qty: qty });
+    });
+    renderNewParts();
+    return;
+  }
+  const r = repairs.find(x => x.id === ctx);
+  if (!r) return;
+  const have = r.parts || [];
+  const partQty = Object.assign({}, r.partQty);
+  parts.forEach(name => {
+    partQty[name] = (have.includes(name) || partQty[name]) ? (partQty[name] > 0 ? partQty[name] : 1) + qty : qty;
+  });
+  updateRepair(ctx, { parts: firebase.firestore.FieldValue.arrayUnion(...parts), partQty: partQty }, 'adding parts');
+}
+
+function changeQty(id, index, delta) {
+  const r = repairs.find(x => x.id === id);
+  if (!r) return;
+  const name = r.parts[index];
+  const partQty = Object.assign({}, r.partQty);
+  partQty[name] = Math.max(1, qtyOf(r, name) + delta);
+  updateRepair(id, { partQty: partQty }, 'changing quantity');
+}
+
+function removePart(id, index) {
+  const r = repairs.find(x => x.id === id);
+  if (!r) return;
+  const name = r.parts[index];
+  if (!confirm('Remove "' + name + '" from this repair?')) return;
+  const partQty = Object.assign({}, r.partQty);
+  delete partQty[name];
+  updateRepair(id, { parts: firebase.firestore.FieldValue.arrayRemove(name), partQty: partQty }, 'removing part');
+}
+
+async function toggleChecklistItem(id, key, checked) {
+  try {
+    updateStatus('syncing');
+    await repairsCol.doc(id).update({ ['checklist.' + key]: checked });
+    updateStatus('online');
+  } catch (error) {
+    console.error("Error updating checklist:", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+    renderRepairs();
+  }
+}
+
+async function toggleInvoiced(id, checked) {
+  try {
+    updateStatus('syncing');
+    await repairsCol.doc(id).update({ invoiced: checked });
+    updateStatus('online');
+  } catch (error) {
+    console.error("Error updating invoiced status:", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+    renderRepairs();
+  }
+}
+
+function filterRepairs() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const cards = document.querySelectorAll('.repair-card');
+  
+  cards.forEach(card => {
+    const text = decodeURIComponent(card.dataset.search || '');
+    card.style.display = text.includes(search) ? 'block' : 'none';
+  });
+}
+
+function toggleRepairForm() {
+  const container = document.getElementById('add-form-container');
+  formVisible = !formVisible;
+  
+  newParts = [];
+  if (!formVisible) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  container.innerHTML = `
+    <div class="add-repair-form">
+      <h3 style="font-size:14px;margin-bottom:12px;color:#0B1E3D;">Add New Repair</h3>
+      <div class="form-row">
+        <div>
+          <label>Cart Number *</label>
+          <input type="text" id="new-cart" placeholder="e.g., 001" maxlength="3">
+        </div>
+        <div>
+          <label>Date *</label>
+          <input type="date" id="new-date" value="${new Date().toISOString().split('T')[0]}">
+        </div>
+        <div>
+          <label>Technician</label>
+          <input type="text" id="new-tech" placeholder="e.g., Cody">
+        </div>
+      </div>
+      <div class="form-row full">
+        <div>
+          <label>Category</label>
+          <select id="new-category" style="padding:8px;border:1px solid #0B1E3D;border-radius:4px;font-family:inherit;font-size:12px;">
+            <option value="">Auto-detect from description</option>
+            ${CATEGORIES.map(c => `<option>${c.name}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div>
+          <label>Description of Work Done *</label>
+          <textarea id="new-description" placeholder="What repairs were performed..."></textarea>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div>
+          <label>Parts Used</label>
+          <div class="parts-list" id="new-parts-chips" style="margin-bottom:6px;"></div>
+          <div class="add-part" style="margin-top:0;">
+            <input type="text" id="add-part-new" placeholder="Type a few letters to search inventory..." autocomplete="off" oninput="showSuggestions('new')" onblur="hideSuggestions('new')" onkeydown="if(event.key==='Enter')addParts('new')">
+            <input type="number" class="add-qty" id="add-qty-new" value="1" min="1" title="Quantity" aria-label="Quantity">
+            <button type="button" onclick="addParts('new')">➕ Add Part</button>
+          </div>
+          <div class="suggestions" id="suggest-new"></div>
+        </div>
+      </div>
+      <div class="form-row" style="grid-template-columns: auto auto;">
+        <button onclick="saveNewRepair()">✅ Save Repair</button>
+        <button onclick="toggleRepairForm()" style="background:#999;">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+async function saveNewRepair() {
+  const cart = document.getElementById('new-cart').value.trim();
+  const date = document.getElementById('new-date').value;
+  const description = document.getElementById('new-description').value.trim();
+  addParts('new');
+  const tech = document.getElementById('new-tech').value.trim();
+  
+  if (!cart || !date || !description) {
+    alert('Please fill in Cart Number, Date, and Description');
+    return;
+  }
+  
+  const parts = newParts.map(p => p.name);
+  const partQty = {};
+  newParts.forEach(p => { partQty[p.name] = p.qty; });
+  
+  try {
+    updateStatus('syncing');
+    console.log("Saving repair to Firestore...");
+    
+    await repairsCol.add({
+      cartNum: cart,
+      date: date,
+      description: description,
+      parts: parts,
+      partQty: partQty,
+      tech: tech,
+      invoiced: false,
+      category: document.getElementById('new-category').value,
+      createdAt: new Date().toISOString()
+    });
+    
+    console.log("✅ Repair saved to Firestore");
+    alert('✅ Repair saved! (Syncing across all devices)');
+    toggleRepairForm();
+    document.getElementById('search').value = '';
+    updateStatus('online');
+    
+  } catch (error) {
+    console.error("Error saving repair:", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+  }
+}
+
+async function deleteRepair(id) {
+  if (!confirm('Delete this repair record?')) return;
+  
+  try {
+    updateStatus('syncing');
+    console.log("Deleting repair:", id);
+    
+    await repairsCol.doc(id).delete();
+    
+    console.log("✅ Repair deleted");
+    updateStatus('online');
+    
+  } catch (error) {
+    console.error("Error deleting repair:", error);
+    alert('Error: ' + error.message);
+    updateStatus('error');
+  }
+}
+</script>
+
+</body>
+</html>
